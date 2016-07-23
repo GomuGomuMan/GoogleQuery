@@ -83,3 +83,9 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# Directory
+.idea
+.xml
+*.xml
+.idea/vcs.xml
