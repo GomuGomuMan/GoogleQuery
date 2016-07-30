@@ -3,39 +3,21 @@
  */
 
 var Horsemen = require('node-horseman');
-var async = require('async')
-var fs = require('fs');
 
-
-var outCSV = fs.createWriteStream('file.csv', {flags: 'r+'});
-
-var rider = new Horsemen
-(
+var rider = new Horsemen(
     {
         loadImages: false
     }
 );
 
 rider
-    .open("https://www.google.com/search?q=offense&ie=utf-8&oe=utf-8")
-    .status()
-    .then(function (result)
-    {
-        if (result != 200)
-            console.log("Search does not load!");
-
-        else
-        {
-            rider.text('div')
-                .then(function (res)
-                {
-                    console.log(res);
-                })
-        }
-    });
-
-
-
+    .userAgent('Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0')
+    .open('https://www.google.com/search?q=innocence')
+    .click('#uid_0 > div._LJ._qxg.xpdarr._WGh.vk_arc')
+    .keyboardEvent('keypress', 16777221)
+    .text('.xpdxpnd > div > span:first')
+    .log() // prints out the number of results
+    .close();
 
 
 
