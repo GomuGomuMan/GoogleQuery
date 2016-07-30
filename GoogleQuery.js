@@ -7,7 +7,8 @@ var async = require('async');
 
 var rider = new Horsemen(
     {
-        loadImages: false
+        loadImages: false,
+        timeout: 10000
     }
 );
 
@@ -19,7 +20,7 @@ rider
     {
         if (result !== 200)
         {
-            console.log("Website does NOT load!")
+            console.log("Website does NOT load!");
             rider.close();
         }
 
@@ -30,8 +31,8 @@ rider
 
         }
     })
-    .click('#uid_0 > div._LJ._qxg.xpdarr._WGh.vk_arc')
-    .keyboardEvent('keypress', 16777221)
+    .click('#uid_0 > div._LJ._qxg.xpdarr._WGh.vk_arc') // Click expend button
+    .keyboardEvent('keypress', 16777221) // Hit Enter
     .text('.xpdxpnd >> span:first')
     .log() // prints out the number of results
     .catch(function (err)
@@ -41,4 +42,15 @@ rider
     .close();
 
 
+
+
+
+async.parallelLimit(automation, 10, function(err, results)
+{
+    if (err)
+    {
+        console.log(err);
+        throw err;
+    }
+});
 
