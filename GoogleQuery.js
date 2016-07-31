@@ -48,13 +48,6 @@ writer.pipe(fs.createWriteStream(OUTPUT_FILE, {flags:'r+'}));
 // Origin -> Word -> Def
 function getQuery(word)
 {
-
-
-
-
-    var keyValue = [];
-
-
     var rider = new Horsemen(
         {
             loadImages: false,
@@ -86,123 +79,149 @@ function getQuery(word)
         .html(JQUERY_SELECTOR_QUERY)
         .then(function (res)
         {
+            // Split root
+            var arrStrBranch = res.split(/reinforced by |; based on /);
 
 
-            var arrStr = res.split(/: from |, from|from|\(based on/);
-
-            // Clean up ')' and whitespace
-            cleanupStr(arrStr);
-
-            // Testing
-            // console.log("------------------------------------------------------");
-            // for (i = 0; i < arrStr.length; i++)
-            // {
-            //     arrStr[i].trim();
-            //     console.log("Member " + i + " " + arrStr[i] + '\n');
-            // }
-
-
-            //pushKeyVal(keyValue, arrStr.shift(), word, BLANK);
-
-
-
-            // Testing
-            // console.log("------------------------------------------------------");
-            // for (i = 0; i < arrStr.length; i++)
-            // {
-            //     arrStr[i].trim();
-            //     console.log("Testing Member " + i + " " + arrStr[i] + '\n');
-            // }
-
-
-            var count = 1;
-
-            // Test if arrStr still has member
-            var currOrigin = BLANK;
-
-            while (arrStr.length != 0) // TODO: Change to while loop for iteration purpose
+            for (i = 0; i < arrStrBranch.length; ++i)
             {
-                var currWord = BLANK;
-                var currDef = BLANK;
-
-                console.log("------------------------------------------------------");
-                console.log("Member " + count + " " + arrStr[0] + '\n');
-                console.log("------------------------------------------------------");
+                console.log("arrStrBranch " + i + " " + arrStrBranch[i]);
+            }
 
 
-                var currOriginTrue = arrStr[0].match(/(.+)(?:<i>.*<\/i>)/);
-                var currWordTrue = arrStr[0].match(/<i>(.*)<\/i>/); // Remove <i> tag after having the word by itself
-                var currDefTrue = arrStr[0].match(/(‘.+’)/);
+            var saveKeyVal = [];
+            var countRootLv = 1;
+            while (arrStrBranch.length != 0)
+            {
+
+                // Split second layer
+                var keyValue = saveKeyVal.slice();
 
 
 
-                if (currOriginTrue) // Origin
+                var arrStr = arrStrBranch[0].split(/: from |, from|from|\(based on/);
+
+
+                // Clean up ')' and whitespace
+                cleanupStr(arrStr);
+
+
+                var count2ndLv = 1;
+
+                // Test if arrStr still has member
+                var currOrigin = BLANK;
+
+                while (arrStr.length != 0) // TODO: Change to while loop for iteration purpose
                 {
-                    currOrigin = currOriginTrue[1];
+                    var currWord = BLANK;
+                    var currDef = BLANK;
+
+                    console.log("------------------------------------------------------");
+                    console.log("Member " + count2ndLv + " " + arrStr[0] + '\n');
+                    console.log("------------------------------------------------------");
 
 
-                    currWord = currWordTrue[1];
+                    var currOriginTrue = arrStr[0].match(/(.+)(?:<i>.*<\/i>)/);
+                    var currWordTrue = arrStr[0].match(/<i>(.*)<\/i>/); // Remove <i> tag after having the word by itself
+                    var currDefTrue = arrStr[0].match(/(‘.+’)/);
 
 
-                    if (currDefTrue)
-                        currDef = currDefTrue[1];
-                }
-                else
-                {
-                    if (count == 1)
-                        currWord = word;
-                    else if (currWordTrue)
+
+                    if (currOriginTrue) // Origin
+                    {
+                        currOrigin = currOriginTrue[1];
+
+
                         currWord = currWordTrue[1];
 
-                    if (currDefTrue) // no origin && def
-                    {
-                        currDef = currDefTrue[1];
+
+                        if (currDefTrue)
+                            currDef = currDefTrue[1];
                     }
-                    else // No origin && No def
+                    else
                     {
-                        currOrigin = arrStr[0];
+                        if (count2ndLv == 1)
+                            currWord = word;
+                        else if (currWordTrue)
+                            currWord = currWordTrue[1];
+
+                        if (currDefTrue) // no origin && def
+                        {
+                            currDef = currDefTrue[1];
+                        }
+                        else // No origin && No def
+                        {
+                            currOrigin = arrStr[0];
+                        }
+
                     }
+
+
+                    console.log("------------------------------------------------------");
+                    console.log("CurrOrigin: " + currOrigin);
+                    console.log("currWord: " + currWord);
+                    console.log("currDef: " + currDef);
+                    console.log("------------------------------------------------------");
+
+
+                    pushKeyVal(keyValue, currOrigin, currWord, currDef);
+
+                    /*
+                    ** Save key value of root (origin 1 - word 1 - def 1)
+                     */
+                    if (arrStrBranch.length > 1 && count2ndLv == 1 && countRootLv == 1)
+                    {
+                        saveKeyVal = keyValue.slice();
+
+                        // Testing
+                        // console.log("------------------------------------------------------");
+                        // for (i = 0; i < saveKeyVal.length; ++i)
+                        // {
+                        //     console.log("Iteration " + i);
+                        //     console.log("saveKeyVal: " + saveKeyVal[i]);
+                        // }
+                        // console.log("------------------------------------------------------");
+
+                    }
+
+
+                    // Remove this element from arrStr after done
+                    arrStr.shift();
+                    ++count2ndLv;
+
 
                 }
 
 
 
+                // Print to file
+                writer.write(
+                    keyValue
+                );
 
 
+                //Test queue
                 console.log("------------------------------------------------------");
-                console.log("CurrOrigin: " + currOrigin);
-                console.log("currWord: " + currWord);
-                console.log("currDef: " + currDef);
+                for (i = 0; i < keyValue.length; i++)
+                {
+                    console.log("keyVal " + i + " " + keyValue[i] + '\n');
+                    // var i = keyValue.pop();
+
+                }
                 console.log("------------------------------------------------------");
 
 
-                // increaseColSize(count);
-                pushKeyVal(keyValue, currOrigin, currWord, currDef);
+                // Increment countRootLv
+                ++countRootLv;
 
-                // Remove this element from arrStr after done
-                arrStr.shift();
-                ++count;
+
+                // Remove this element after arrStrBranch[0] is done
+                arrStrBranch.shift();
             }
 
 
 
-            // Print to file
-            writer.write(
-                keyValue
-            );
 
-
-            //Test queue & stack
-            console.log("------------------------------------------------------");
-            for (i = 0; i < keyValue.length; i++)
-            {
-                console.log("keyVal " + i + " " + keyValue[i] + '\n');
-                // var i = keyValue.pop();
-
-            }
-            console.log("------------------------------------------------------");
-
-            console.log("Header of " + word + ": " + headers.length);
         })
         .catch(function (err)
         {
@@ -230,8 +249,7 @@ function cleanupStr(arr)
 {
     for (i = 0; i < arr.length; i++)
     {
-        arr[i] = arr[i].replace(/\)|^\s+|\s+$/g, ''); // Clean up ')'
-        // arr[i] = arr[i].replace(/^\s+|\s+$/g, ''); // Clean up whitespace
+        arr[i] = arr[i].replace(/\)|^\s+|\s+$/g, ''); // Clean up ')' and whitespace
     }
 }
 
