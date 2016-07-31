@@ -10,28 +10,39 @@ var parse = require('csv-parse');
 
 
 
-const inputFile = "data.csv";
-const outputFile = "output.csv";
-const userAgent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0";
-const url = "https://www.google.com/search?q=";
-const searchPadding = "+definition";
-const blank = "N/A"
+const INPUT_FILE = "data.csv";
+const OUTPUT_FILE = "output.csv";
+const USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0";
+const URL = "https://www.google.com/search?q=";
+const SEARCH_PADDING = "+definition";
+const BLANK = "N/A";
+const JQUERY_SELECTOR_EXPAND_BTN = '#uid_0 > div._LJ._qxg.xpdarr._WGh.vk_arc';
+const JQUERY_SELECTOR_QUERY = '.xpdxpnd >> span:first';
+const COMMAND_KEY_PRESS = 'keypress';
+const COMMAND_ENTER_BTN = 16777221;
 
+const COL1 = "Origin";
+const COL2 = "Word";
+const COL3 = "Def";
+
+
+var headers = [COL1, COL2, COL3];
 
 
 var writer = csvWriter(
-{
-    sendHeaders:false
-});
+    {
+        headers: headers
+    });
 
-writer.pipe(fs.createWriteStream(outputFile, {flags:'r+'}));
+writer.pipe(fs.createWriteStream(OUTPUT_FILE, {flags:'r+'}));
+
+
 
 
 // Origin -> Word -> Def
 function getQuery(word)
 {
-    var query = "";
-    var time = "";
+
 
     var keyValue = [];
 
@@ -45,8 +56,8 @@ function getQuery(word)
 
 
     rider
-        .userAgent(userAgent)
-        .open(url + word + searchPadding)
+        .userAgent(USER_AGENT)
+        .open(URL + word + SEARCH_PADDING)
         .status()
         .then(function (result)
         {
@@ -62,52 +73,102 @@ function getQuery(word)
                 console.log("Website loads! " + word);
             }
         })
-        .click('#uid_0 > div._LJ._qxg.xpdarr._WGh.vk_arc') // Click expend button
-        .keyboardEvent('keypress', 16777221) // Hit Enter
-        .text('.xpdxpnd >> span:first')
+        .click(JQUERY_SELECTOR_EXPAND_BTN) // Click expend button
+        .keyboardEvent(COMMAND_KEY_PRESS, COMMAND_ENTER_BTN) // Hit Enter
+        .html(JQUERY_SELECTOR_QUERY)
         .then(function (res)
         {
-            query += res;
+            var arrStr = res.split(/: from |, from|from|\(based on/);
 
+            // Clean up ')' and whitespace
+            cleanupStr(arrStr);
 
-            // console.log("Query: " + query + '\n');
-
-
-            // Get Time
-            var match = (query.match(/(.+):(.+)/));
-            if (match)
+            // Testing
+            console.log("------------------------------------------------------");
+            for (i = 0; i < arrStr.length; i++)
             {
-                time = match[1].trim();
-                // console.log("Time: " + time);
+                arrStr[i].trim();
+                console.log("Member " + i + " " + arrStr[i] + '\n');
             }
-            keyValue.push(time); // Origin
-            keyValue.push(word); // Word
-            keyValue.push(blank); // Blank Def
 
-            // Get Val
-            var arrStr = processVal(match[2]);
 
-            keyValue.push(arrStr[1]);
+            pushKeyVal(keyValue, arrStr.shift(), word, BLANK);
+
+
+
+            // Testing
+            console.log("------------------------------------------------------");
+            for (i = 0; i < arrStr.length; i++)
+            {
+                arrStr[i].trim();
+                console.log("Testing Member " + i + " " + arrStr[i] + '\n');
+            }
+
+
+            var count = 1;
+
+            // Test if arrStr still has member
+            if (arrStr.length != 0) // TODO: Change to while loop for iteration purpose
+            {
+                var currOriginTrue = arrStr[0].match(/(.+)(?:<i>.*<\/i>)/);
+                var currWordTrue = arrStr[0].match(/<i>(.*)<\/i>/); // Remove <i> tag after having the word by itself
+                var currDefTrue = arrStr[0].match(/(‘.+’)/);
+
+                var currOrigin = arrStr[0];
+                var currWord = BLANK;
+                var currDef = BLANK;
+
+                if (currOriginTrue)
+                {
+                    currOrigin = currOriginTrue[1];
+                }
+
+                if (currWordTrue)
+                {
+                    currWord = currWordTrue[1];
+                }
+
+                if (currDefTrue)
+                {
+                    currDef = currDefTrue[1];
+                }
+
+
+
+                console.log("------------------------------------------------------");
+                console.log("CurrOrigin: " + currOrigin);
+                console.log("currWord: " + currWord);
+                console.log("currDef: " + currDef);
+                console.log("------------------------------------------------------");
+
+
+                increaseColSize(count);
+                pushKeyVal(keyValue, currOrigin, currWord, currDef);
+
+                // Remove this element from arrStr after done
+                arrStr.shift();
+            }
+
+
+
 
 
 
             // Print to file
             writer.write(
-                {
-                    Word: word,
-                    Time: time,
-                    Rest: arrStr[1]
-                }
+                keyValue
             );
 
 
-            // Test queue & stack
+            //Test queue & stack
+            console.log("------------------------------------------------------");
             for (i = 0; i < keyValue.length; i++)
             {
-                console.log("keyVal " + i + " " + keyValue[i]);
+                console.log("keyVal " + i + " " + keyValue[i] + '\n');
                 // var i = keyValue.pop();
 
             }
+            console.log("------------------------------------------------------");
 
         })
         .catch(function (err)
@@ -122,17 +183,33 @@ function getQuery(word)
 
 
 
-function processVal(val)
+function increaseColSize(count)
 {
-    console.log("String: " + val);
-
-    // for (i = 1; i < arrayStr.length; i++)
-    // {
-    //     console.log("Member " + i + arrayStr[i] + '\n');
-    // }
-
-    return val.split(/, from|from/);
+    headers.push(COL1 + count);
+    headers.push(COL2 + count);
+    headers.push(COL3 + count);
 }
+
+
+function pushKeyVal(keyValue, origin, word, def)
+{
+    keyValue.push(origin);
+    keyValue.push(word);
+    keyValue.push(def);
+}
+
+
+
+
+function cleanupStr(arr)
+{
+    for (i = 0; i < arr.length; i++)
+    {
+        arr[i] = arr[i].replace(/\)|^\s+|\s+$/g, ''); // Clean up ')'
+        // arr[i] = arr[i].replace(/^\s+|\s+$/g, ''); // Clean up whitespace
+    }
+}
+
 
 
 
@@ -148,6 +225,6 @@ var parser = parse({delimiter: ','}, function (err, data) {
 });
 
 
-fs.createReadStream(inputFile).pipe(parser);
+fs.createReadStream(INPUT_FILE).pipe(parser);
 
 
