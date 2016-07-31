@@ -26,7 +26,13 @@ const COL2 = "Word";
 const COL3 = "Def";
 
 
-var headers = [COL1, COL2, COL3];
+
+var headers = [];
+
+for (count = 1; count < 20; ++count)
+{
+    increaseColSize(count);
+}
 
 
 var writer = csvWriter(
@@ -42,6 +48,8 @@ writer.pipe(fs.createWriteStream(OUTPUT_FILE, {flags:'r+'}));
 // Origin -> Word -> Def
 function getQuery(word)
 {
+
+
 
 
     var keyValue = [];
@@ -78,60 +86,86 @@ function getQuery(word)
         .html(JQUERY_SELECTOR_QUERY)
         .then(function (res)
         {
+
+
             var arrStr = res.split(/: from |, from|from|\(based on/);
 
             // Clean up ')' and whitespace
             cleanupStr(arrStr);
 
             // Testing
-            console.log("------------------------------------------------------");
-            for (i = 0; i < arrStr.length; i++)
-            {
-                arrStr[i].trim();
-                console.log("Member " + i + " " + arrStr[i] + '\n');
-            }
+            // console.log("------------------------------------------------------");
+            // for (i = 0; i < arrStr.length; i++)
+            // {
+            //     arrStr[i].trim();
+            //     console.log("Member " + i + " " + arrStr[i] + '\n');
+            // }
 
 
-            pushKeyVal(keyValue, arrStr.shift(), word, BLANK);
+            //pushKeyVal(keyValue, arrStr.shift(), word, BLANK);
 
 
 
             // Testing
-            console.log("------------------------------------------------------");
-            for (i = 0; i < arrStr.length; i++)
-            {
-                arrStr[i].trim();
-                console.log("Testing Member " + i + " " + arrStr[i] + '\n');
-            }
+            // console.log("------------------------------------------------------");
+            // for (i = 0; i < arrStr.length; i++)
+            // {
+            //     arrStr[i].trim();
+            //     console.log("Testing Member " + i + " " + arrStr[i] + '\n');
+            // }
 
 
             var count = 1;
 
             // Test if arrStr still has member
-            if (arrStr.length != 0) // TODO: Change to while loop for iteration purpose
+            var currOrigin = BLANK;
+
+            while (arrStr.length != 0) // TODO: Change to while loop for iteration purpose
             {
+                var currWord = BLANK;
+                var currDef = BLANK;
+
+                console.log("------------------------------------------------------");
+                console.log("Member " + count + " " + arrStr[0] + '\n');
+                console.log("------------------------------------------------------");
+
+
                 var currOriginTrue = arrStr[0].match(/(.+)(?:<i>.*<\/i>)/);
                 var currWordTrue = arrStr[0].match(/<i>(.*)<\/i>/); // Remove <i> tag after having the word by itself
                 var currDefTrue = arrStr[0].match(/(‘.+’)/);
 
-                var currOrigin = arrStr[0];
-                var currWord = BLANK;
-                var currDef = BLANK;
 
-                if (currOriginTrue)
+
+                if (currOriginTrue) // Origin
                 {
                     currOrigin = currOriginTrue[1];
-                }
 
-                if (currWordTrue)
-                {
+
                     currWord = currWordTrue[1];
+
+
+                    if (currDefTrue)
+                        currDef = currDefTrue[1];
+                }
+                else
+                {
+                    if (count == 1)
+                        currWord = word;
+                    else if (currWordTrue)
+                        currWord = currWordTrue[1];
+
+                    if (currDefTrue) // no origin && def
+                    {
+                        currDef = currDefTrue[1];
+                    }
+                    else // No origin && No def
+                    {
+                        currOrigin = arrStr[0];
+                    }
+
                 }
 
-                if (currDefTrue)
-                {
-                    currDef = currDefTrue[1];
-                }
+
 
 
 
@@ -142,15 +176,13 @@ function getQuery(word)
                 console.log("------------------------------------------------------");
 
 
-                increaseColSize(count);
+                // increaseColSize(count);
                 pushKeyVal(keyValue, currOrigin, currWord, currDef);
 
                 // Remove this element from arrStr after done
                 arrStr.shift();
+                ++count;
             }
-
-
-
 
 
 
@@ -170,6 +202,7 @@ function getQuery(word)
             }
             console.log("------------------------------------------------------");
 
+            console.log("Header of " + word + ": " + headers.length);
         })
         .catch(function (err)
         {
@@ -178,16 +211,8 @@ function getQuery(word)
         .close();
 
 
+
     return 0;
-}
-
-
-
-function increaseColSize(count)
-{
-    headers.push(COL1 + count);
-    headers.push(COL2 + count);
-    headers.push(COL3 + count);
 }
 
 
@@ -211,6 +236,13 @@ function cleanupStr(arr)
 }
 
 
+
+function increaseColSize(count)
+{
+    headers.push(COL1 + count);
+    headers.push(COL2 + count);
+    headers.push(COL3 + count);
+}
 
 
 
