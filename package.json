@@ -1,0 +1,25 @@
+{
+  "name": "google-query",
+  "version": "0.1.0",
+  "description": "This Node JS project collects data on word's history on Google queries",
+  "main": "GoogleQuery.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gomugomuman/GoogleQuery.git"
+  },
+  "author": "Duy NGuyen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gomugomuman/GoogleQuery/issues"
+  },
+  "homepage": "https://github.com/gomugomuman/GoogleQuery#readme",
+  "dependencies": {
+    "async": "^2.0.1",
+    "csv-parse": "^1.1.7",
+    "csv-write-stream": "^2.0.0",
+    "node-horseman": "^3.1.1"
+  }
+}
