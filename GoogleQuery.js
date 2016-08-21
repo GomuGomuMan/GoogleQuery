@@ -10,8 +10,9 @@ var parse = require('csv-parse');
 
 
 
-const INPUT_FILE = "Input.csv"; // Change to data for test
+const INPUT_FILE = "data.csv"; // Change to data for test
 const OUTPUT_FILE = "output.csv";
+
 const USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0";
 const URL = "https://www.google.com/search?q=";
 const SEARCH_PADDING = "+definition";
@@ -46,75 +47,80 @@ writer.pipe(fs.createWriteStream(OUTPUT_FILE, {flags:'r+'}));
 
 
 // Origin -> Word -> Def
-function getQuery(word)
+// Origin -> Word -> Def
+function getQuery(word, callback)
 {
-    // Check if input contains a digit = cannot be word
-    if (String(word).match(/.*\d.*/))
-    {
-        //console.log("Number found: " + word);
-        return 0;
-    }
+    setTimeout(function () {
+
+        // Check if input contains a digit = cannot be word
+        if (String(word).match(/.*\d.*/))
+        {
+            //console.log("Number found: " + word);
+            return 0;
+        }
 
 
-    else
-    {
-        var rider = new Horsemen(
-            {
-                loadImages: false,
-                timeout: 10000
-            }
-        );
-
-
-        rider
-            .userAgent(USER_AGENT)
-            .open(URL + word + SEARCH_PADDING)
-            .status()
-            .then(function (result)
-            {
-                if (result !== 200)
+        else
+        {
+            var rider = new Horsemen(
                 {
-                    console.log("Website does NOT load!");
-                    rider.close();
-                    return 1;
+                    loadImages: false,
+                    timeout: 10000
                 }
+            );
 
 
-                else
+            rider
+                .userAgent(USER_AGENT)
+                .open(URL + word + SEARCH_PADDING)
+                .status()
+                .then(function (result)
                 {
-                    console.log("Website loads! " + word);
+                    if (result !== 200)
+                    {
+                        console.log("Website does NOT load!");
+                        rider.close();
+                        return 1;
+                    }
 
-                    rider
-                        .text(JQUERY_SELECTOR_EXPAND_BTN)
-                        .then(function (res) {
-                            if (!res)
-                            {
-                                console.log("No def found!" + res);
-                                rider.close();
-                                return 1;
-                            }
 
-                            else
-                            {
-                                rider
-                                    .click(JQUERY_SELECTOR_EXPAND_BTN) // Click expand button
-                                    .keyboardEvent(COMMAND_KEY_PRESS, COMMAND_ENTER_BTN) // Hit Enter
-                                    .html(JQUERY_SELECTOR_QUERY)
-                                    .then(function (res)
-                                    {
-                                        processQuery(res, word);
-                                    })
-                                    .catch(function (err)
-                                    {
-                                        console.log("Error: " + err);
-                                    })
-                                    .close();
-                            }
+                    else
+                    {
+                        // console.log("Website loads! " + word);
 
-                        })
-                }
-            });
-    }
+                        rider
+                            .text(JQUERY_SELECTOR_EXPAND_BTN)
+                            .then(function (res) {
+                                if (!res)
+                                {
+                                    console.log("No def found! " + res);
+                                    rider.close();
+                                    return 1;
+                                }
+
+                                else
+                                {
+                                    rider
+                                        .click(JQUERY_SELECTOR_EXPAND_BTN) // Click expand button
+                                        .keyboardEvent(COMMAND_KEY_PRESS, COMMAND_ENTER_BTN) // Hit Enter
+                                        .html(JQUERY_SELECTOR_QUERY)
+                                        .then(function (res)
+                                        {
+                                            processQuery(res, word);
+                                        })
+                                        .catch(function (err)
+                                        {
+                                            console.log("Error: " + err);
+                                        })
+                                        .close();
+                                    callback(null);
+                                }
+
+                            })
+                    }
+                });
+        }
+    }, 1000);
 
 
     return 0;
@@ -127,10 +133,11 @@ function processQuery(res, word)
     // Split root
     var arrStrBranch = res.split(/reinforced by |; based on /);
 
-    for (i = 0; i < arrStrBranch.length; ++i)
-    {
-        console.log("arrStrBranch " + i + " " + arrStrBranch[i]);
-    }
+    // Test
+    // for (i = 0; i < arrStrBranch.length; ++i)
+    // {
+    //     console.log("arrStrBranch " + i + " " + arrStrBranch[i]);
+    // }
 
     var keyValue = [];
     var finalKeyVal = [];
@@ -141,15 +148,16 @@ function processQuery(res, word)
         // Split second layer
 
 
-        if (currIndexRoot > 0)
-        {
-
-            for (i = 0; i < keyValue.length; ++i)
-            {
-                console.log(i + ": " + keyValue[i] + '\n');
-            }
-
-        }
+        // Test
+        // if (currIndexRoot > 0)
+        // {
+        //
+        //     for (i = 0; i < keyValue.length; ++i)
+        //     {
+        //         console.log(i + ": " + keyValue[i] + '\n');
+        //     }
+        //
+        // }
 
 
 
@@ -208,14 +216,15 @@ function processQuery(res, word)
                 }
 
 
-                console.log("------------------------------------------------------");
-                console.log("Member " + currIndexLastLayer + " " + currLastLayer + '\n');
-                console.log("------------------------------------------------------");
-                console.log("------------------------------------------------------");
-                console.log("CurrOrigin: " + currOrigin);
-                console.log("currWord: " + currWord);
-                console.log("currDef: " + currDef);
-                console.log("------------------------------------------------------");
+                // Test
+                // console.log("------------------------------------------------------");
+                // console.log("Member " + currIndexLastLayer + " " + currLastLayer + '\n');
+                // console.log("------------------------------------------------------");
+                // console.log("------------------------------------------------------");
+                // console.log("CurrOrigin: " + currOrigin);
+                // console.log("currWord: " + currWord);
+                // console.log("currDef: " + currDef);
+                // console.log("------------------------------------------------------");
 
 
                 pushKeyVal(keyValue, currOrigin, currWord, currDef);
@@ -226,7 +235,7 @@ function processQuery(res, word)
                     && currIndex2ndLayer == currArr2ndLayer.length - 1)
                 {
                     keyValue = keyValue.splice(0, 3);
-                    console.log("keyValue: " + keyValue);
+                    // console.log("keyValue: " + keyValue);
                 }
 
 
@@ -236,7 +245,7 @@ function processQuery(res, word)
                     cleanandWrite(finalKeyVal, writer);
 
                     keyValue = keyValue.splice(0, keyValue.length - 3);
-                    console.log("keyValueLeaf: " + keyValue);
+                    // console.log("keyValueLeaf: " + keyValue);
                 }
 
 
@@ -255,14 +264,14 @@ function processQuery(res, word)
         cleanandWrite(finalKeyVal, writer);
 
         //Test queue
-        console.log("------------------------------------------------------");
-        for (i = 0; i < keyValue.length; i++)
-        {
-            console.log("keyVal " + i + " " + keyValue[i] + '\n');
-            // var i = keyValue.pop();
-
-        }
-        console.log("------------------------------------------------------");
+        // console.log("------------------------------------------------------");
+        // for (i = 0; i < keyValue.length; i++)
+        // {
+        //     console.log("keyVal " + i + " " + keyValue[i] + '\n');
+        //     // var i = keyValue.pop();
+        //
+        // }
+        // console.log("------------------------------------------------------");
 
 
 
@@ -319,11 +328,13 @@ function increaseColSize(count)
 
 
 // Parsing
-var parser = parse({delimiter: ','}, function (err, data) {
-    async.eachSeries(data, function(word, callback)
-    {
-        getQuery(word);
-        callback();
+var parser = parse({delimiter: ','}, function(err, data) {
+    async.eachLimit(data, 5, getQuery, function(err) {
+
+      if (err)
+      {
+          console.log("Error: " + err);
+      }
     })
 });
 
