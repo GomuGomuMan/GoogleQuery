@@ -10,7 +10,7 @@ var parse = require('csv-parse');
 
 
 
-const INPUT_FILE = "data.csv";
+const INPUT_FILE = "Input.csv"; // Change to data for test
 const OUTPUT_FILE = "output.csv";
 const USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0";
 const URL = "https://www.google.com/search?q=";
@@ -48,191 +48,241 @@ writer.pipe(fs.createWriteStream(OUTPUT_FILE, {flags:'r+'}));
 // Origin -> Word -> Def
 function getQuery(word)
 {
-    var rider = new Horsemen(
-        {
-            loadImages: false,
-            timeout: 10000
-        }
-    );
+    // Check if input contains a digit = cannot be word
+    if (String(word).match(/.*\d.*/))
+    {
+        //console.log("Number found: " + word);
+        return 0;
+    }
 
 
-    rider
-        .userAgent(USER_AGENT)
-        .open(URL + word + SEARCH_PADDING)
-        .status()
-        .then(function (result)
-        {
-            if (result !== 200)
+    else
+    {
+        var rider = new Horsemen(
             {
-                console.log("Website does NOT load!");
-                rider.close();
+                loadImages: false,
+                timeout: 10000
             }
+        );
 
 
-            else
+        rider
+            .userAgent(USER_AGENT)
+            .open(URL + word + SEARCH_PADDING)
+            .status()
+            .then(function (result)
             {
-                console.log("Website loads! " + word);
-            }
-        })
-        .click(JQUERY_SELECTOR_EXPAND_BTN) // Click expend button
-        .keyboardEvent(COMMAND_KEY_PRESS, COMMAND_ENTER_BTN) // Hit Enter
-        .html(JQUERY_SELECTOR_QUERY)
-        .then(function (res)
-        {
-            // Split root
-            var arrStrBranch = res.split(/reinforced by |; based on /);
-
-
-            for (i = 0; i < arrStrBranch.length; ++i)
-            {
-                console.log("arrStrBranch " + i + " " + arrStrBranch[i]);
-            }
-
-
-            var saveKeyVal = [];
-            var countRootLv = 1;
-            while (arrStrBranch.length != 0)
-            {
-
-                // Split second layer
-                var keyValue = saveKeyVal.slice();
-
-
-
-                var arrStr = arrStrBranch[0].split(/: from |, from|from|\(based on/);
-
-
-                // Clean up ')' and whitespace
-                cleanupStr(arrStr);
-
-
-                var count2ndLv = 1;
-
-                // Test if arrStr still has member
-                var currOrigin = BLANK;
-
-                while (arrStr.length != 0) // TODO: Change to while loop for iteration purpose
+                if (result !== 200)
                 {
-                    var currWord = BLANK;
-                    var currDef = BLANK;
-
-                    console.log("------------------------------------------------------");
-                    console.log("Member " + count2ndLv + " " + arrStr[0] + '\n');
-                    console.log("------------------------------------------------------");
-
-
-                    var currOriginTrue = arrStr[0].match(/(.+)(?:<i>.*<\/i>)/);
-                    var currWordTrue = arrStr[0].match(/<i>(.*)<\/i>/); // Remove <i> tag after having the word by itself
-                    var currDefTrue = arrStr[0].match(/(‘.+’)/);
-
-
-
-                    if (currOriginTrue) // Origin
-                    {
-                        currOrigin = currOriginTrue[1];
-
-
-                        currWord = currWordTrue[1];
-
-
-                        if (currDefTrue)
-                            currDef = currDefTrue[1];
-                    }
-                    else
-                    {
-                        if (count2ndLv == 1)
-                            currWord = word;
-                        else if (currWordTrue)
-                            currWord = currWordTrue[1];
-
-                        if (currDefTrue) // no origin && def
-                        {
-                            currDef = currDefTrue[1];
-                        }
-                        else // No origin && No def
-                        {
-                            currOrigin = arrStr[0];
-                        }
-
-                    }
-
-
-                    console.log("------------------------------------------------------");
-                    console.log("CurrOrigin: " + currOrigin);
-                    console.log("currWord: " + currWord);
-                    console.log("currDef: " + currDef);
-                    console.log("------------------------------------------------------");
-
-
-                    pushKeyVal(keyValue, currOrigin, currWord, currDef);
-
-                    /*
-                    ** Save key value of root (origin 1 - word 1 - def 1)
-                     */
-                    if (arrStrBranch.length > 1 && count2ndLv == 1 && countRootLv == 1)
-                    {
-                        saveKeyVal = keyValue.slice();
-
-                        // Testing
-                        // console.log("------------------------------------------------------");
-                        // for (i = 0; i < saveKeyVal.length; ++i)
-                        // {
-                        //     console.log("Iteration " + i);
-                        //     console.log("saveKeyVal: " + saveKeyVal[i]);
-                        // }
-                        // console.log("------------------------------------------------------");
-
-                    }
-
-
-                    // Remove this element from arrStr after done
-                    arrStr.shift();
-                    ++count2ndLv;
-
-
+                    console.log("Website does NOT load!");
+                    rider.close();
+                    return 1;
                 }
 
 
-
-                // Print to file
-                writer.write(
-                    keyValue
-                );
-
-
-                //Test queue
-                console.log("------------------------------------------------------");
-                for (i = 0; i < keyValue.length; i++)
+                else
                 {
-                    console.log("keyVal " + i + " " + keyValue[i] + '\n');
-                    // var i = keyValue.pop();
+                    console.log("Website loads! " + word);
 
+                    rider
+                        .text(JQUERY_SELECTOR_EXPAND_BTN)
+                        .then(function (res) {
+                            if (!res)
+                            {
+                                console.log("No def found!" + res);
+                                rider.close();
+                                return 1;
+                            }
+
+                            else
+                            {
+                                rider
+                                    .click(JQUERY_SELECTOR_EXPAND_BTN) // Click expand button
+                                    .keyboardEvent(COMMAND_KEY_PRESS, COMMAND_ENTER_BTN) // Hit Enter
+                                    .html(JQUERY_SELECTOR_QUERY)
+                                    .then(function (res)
+                                    {
+                                        processQuery(res, word);
+                                    })
+                                    .catch(function (err)
+                                    {
+                                        console.log("Error: " + err);
+                                    })
+                                    .close();
+                            }
+
+                        })
                 }
-                console.log("------------------------------------------------------");
-
-
-                // Increment countRootLv
-                ++countRootLv;
-
-
-                // Remove this element after arrStrBranch[0] is done
-                arrStrBranch.shift();
-            }
-
-
-
-
-        })
-        .catch(function (err)
-        {
-            console.log("Error: " + err);
-        })
-        .close();
-
+            });
+    }
 
 
     return 0;
 }
+
+
+
+function processQuery(res, word)
+{
+    // Split root
+    var arrStrBranch = res.split(/reinforced by |; based on /);
+
+    for (i = 0; i < arrStrBranch.length; ++i)
+    {
+        console.log("arrStrBranch " + i + " " + arrStrBranch[i]);
+    }
+
+    var keyValue = [];
+    var finalKeyVal = [];
+
+
+    arrStrBranch.forEach(function (currValRoot, currIndexRoot, currArrRoot)
+    {
+        // Split second layer
+
+
+        if (currIndexRoot > 0)
+        {
+
+            for (i = 0; i < keyValue.length; ++i)
+            {
+                console.log(i + ": " + keyValue[i] + '\n');
+            }
+
+        }
+
+
+
+        // Split 2nd layer
+        var arrStr = currValRoot.split(/[:,\s]*from\s|\(based on\s/);
+
+
+        // Test if arrStr still has member
+        var currOrigin = BLANK;
+
+
+        arrStr.forEach(function (currVal2ndLayer, currIndex2ndLayer, currArr2ndLayer)
+        {
+            var arrLeaf = currVal2ndLayer.split(/\s\+\s/);
+
+
+
+
+
+            arrLeaf.forEach(function (currLastLayer, currIndexLastLayer, currArrLastLayer)
+            {
+                var currWord = BLANK;
+                var currDef = BLANK;
+                var currOriginTrue = currLastLayer.match(/(.+)(?:<i>.*<\/i>)/);
+                var currWordTrue = currLastLayer.match(/<i>(.*)<\/i>/); // Remove <i> tag after having the word by itself
+                var currDefTrue = currLastLayer.match(/‘(.+)’/);
+
+
+
+                if (currOriginTrue) // Origin
+                {
+                    currOrigin = currOriginTrue[1];
+
+                    currWord = currWordTrue[1];
+
+
+                    if (currDefTrue)
+                        currDef = currDefTrue[1];
+                }
+                else
+                {
+                    if (currIndex2ndLayer == 0)
+                        currWord = word;
+                    else if (currWordTrue)
+                        currWord = currWordTrue[1];
+
+                    if (currDefTrue) // no origin && def
+                    {
+                        currDef = currDefTrue[1];
+                    }
+                    else // No origin && No def
+                    {
+                        currOrigin = currLastLayer;
+                    }
+
+                }
+
+
+                console.log("------------------------------------------------------");
+                console.log("Member " + currIndexLastLayer + " " + currLastLayer + '\n');
+                console.log("------------------------------------------------------");
+                console.log("------------------------------------------------------");
+                console.log("CurrOrigin: " + currOrigin);
+                console.log("currWord: " + currWord);
+                console.log("currDef: " + currDef);
+                console.log("------------------------------------------------------");
+
+
+                pushKeyVal(keyValue, currOrigin, currWord, currDef);
+                finalKeyVal = keyValue.slice(0); // Save a path to the final val
+
+                // Save root iff there is a branch from root & operation on 2ndLayer has finished
+                if (currIndexRoot < currArrRoot.length - 1
+                    && currIndex2ndLayer == currArr2ndLayer.length - 1)
+                {
+                    keyValue = keyValue.splice(0, 3);
+                    console.log("keyValue: " + keyValue);
+                }
+
+
+                // Save root -> before leaf if there are multiple leaves
+                if (currIndexLastLayer < currArrLastLayer.length - 1)
+                {
+                    cleanandWrite(finalKeyVal, writer);
+
+                    keyValue = keyValue.splice(0, keyValue.length - 3);
+                    console.log("keyValueLeaf: " + keyValue);
+                }
+
+
+
+
+
+                // Write to finalKeyVal when finishing a leaf
+
+
+
+            });
+        });
+
+
+
+        cleanandWrite(finalKeyVal, writer);
+
+        //Test queue
+        console.log("------------------------------------------------------");
+        for (i = 0; i < keyValue.length; i++)
+        {
+            console.log("keyVal " + i + " " + keyValue[i] + '\n');
+            // var i = keyValue.pop();
+
+        }
+        console.log("------------------------------------------------------");
+
+
+
+
+    });
+}
+
+
+function cleanandWrite(keyValue, writer)
+{
+    // Clean up ')' and whitespace
+    keyValue = cleanupStr(keyValue);
+
+
+    // Print to file
+    writer.write(
+        keyValue
+    );
+}
+
 
 
 function pushKeyVal(keyValue, origin, word, def)
@@ -249,9 +299,12 @@ function cleanupStr(arr)
 {
     for (i = 0; i < arr.length; i++)
     {
-        arr[i] = arr[i].replace(/\)|^\s+|\s+$/g, ''); // Clean up ')' and whitespace
+        arr[i] = String(arr[i]).replace(/\)|^\s+|[\.,]*\s*$/g, ""); // Clean up ')' and whitespace
     }
+
+    return arr;
 }
+
 
 
 
