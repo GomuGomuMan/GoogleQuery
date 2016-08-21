@@ -10,8 +10,10 @@ var parse = require('csv-parse');
 
 
 
-const INPUT_FILE = "data.csv"; // Change to data for test
-const OUTPUT_FILE = "output.csv";
+const INPUT_FILE = "C:\\Users\\LUCKY\\Desktop\\Web Crawling\\GoogleQuery\\small input files\\test1.csv"; // Change to data for test
+const OUTPUT_FILE = "C:\\Users\\LUCKY\\Desktop\\Web Crawling\\GoogleQuery\\small input files\\output1.csv";
+// const INPUT_FILE = "data.csv";
+// const OUTPUT_FILE = "output.csv";
 
 const USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0";
 const URL = "https://www.google.com/search?q=";
@@ -24,6 +26,8 @@ const COMMAND_ENTER_BTN = 16777221;
 
 const COL1 = "Origin";
 const COL2 = "Word";
+
+
 const COL3 = "Def";
 
 
@@ -50,12 +54,15 @@ writer.pipe(fs.createWriteStream(OUTPUT_FILE, {flags:'r+'}));
 // Origin -> Word -> Def
 function getQuery(word, callback)
 {
+    console.log("Word: " + word);
+
     setTimeout(function () {
 
         // Check if input contains a digit = cannot be word
         if (String(word).match(/.*\d.*/))
         {
             //console.log("Number found: " + word);
+            callback(null);
             return 0;
         }
 
@@ -80,6 +87,7 @@ function getQuery(word, callback)
                     {
                         console.log("Website does NOT load!");
                         rider.close();
+                        callback(null);
                         return 1;
                     }
 
@@ -95,6 +103,7 @@ function getQuery(word, callback)
                                 {
                                     console.log("No def found! " + res);
                                     rider.close();
+                                    callback(null);
                                     return 1;
                                 }
 
@@ -103,16 +112,27 @@ function getQuery(word, callback)
                                     rider
                                         .click(JQUERY_SELECTOR_EXPAND_BTN) // Click expand button
                                         .keyboardEvent(COMMAND_KEY_PRESS, COMMAND_ENTER_BTN) // Hit Enter
-                                        .html(JQUERY_SELECTOR_QUERY)
-                                        .then(function (res)
-                                        {
-                                            processQuery(res, word);
-                                        })
-                                        .catch(function (err)
-                                        {
-                                            console.log("Error: " + err);
-                                        })
-                                        .close();
+                                        .text(JQUERY_SELECTOR_QUERY)
+                                        .then(function (res) {
+                                            if (!res || res.match(/^\s*Translate/))
+                                            {
+                                                console.log("No tree found! " + word);
+                                                rider.close();
+                                                return 0;
+                                            }
+
+                                            rider
+                                                .html(JQUERY_SELECTOR_QUERY)
+                                                .then(function (res)
+                                                {
+                                                    processQuery(res, word);
+                                                })
+                                                .catch(function (err)
+                                                {
+                                                    console.log("Error: " + err);
+                                                })
+                                                .close();
+                                        });
                                     callback(null);
                                 }
 
@@ -120,7 +140,12 @@ function getQuery(word, callback)
                     }
                 });
         }
+
+        var date = new Date();
+        console.log("Word " + word + " Finished at: " + date.getHours() + ":" + date.getMinutes() + ":"
+            + date.getSeconds() + '\n');
     }, 1000);
+
 
 
     return 0;
@@ -131,7 +156,7 @@ function getQuery(word, callback)
 function processQuery(res, word)
 {
     // Split root
-    var arrStrBranch = res.split(/reinforced by |; based on /);
+    var arrStrBranch = res.split(/\sreinforced by\s|;\sbased on\s/);
 
     // Test
     // for (i = 0; i < arrStrBranch.length; ++i)
@@ -329,12 +354,14 @@ function increaseColSize(count)
 
 // Parsing
 var parser = parse({delimiter: ','}, function(err, data) {
+    /**
+     * Run 5 functions at a time with a delay of 1 second each
+     */
     async.eachLimit(data, 5, getQuery, function(err) {
-
-      if (err)
-      {
+        if (err)
+        {
           console.log("Error: " + err);
-      }
+        }
     })
 });
 
