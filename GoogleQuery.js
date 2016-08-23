@@ -10,10 +10,10 @@ var parse = require('csv-parse');
 
 
 
-const INPUT_FILE = "C:\\Users\\LUCKY\\Desktop\\Web Crawling\\GoogleQuery\\small input files\\test1.csv"; // Change to data for test
-const OUTPUT_FILE = "C:\\Users\\LUCKY\\Desktop\\Web Crawling\\GoogleQuery\\small input files\\output1.csv";
-// const INPUT_FILE = "data.csv";
-// const OUTPUT_FILE = "output.csv";
+// const INPUT_FILE = "C:\\Users\\LUCKY\\Desktop\\Web Crawling\\GoogleQuery\\small input files\\test1.csv"; // Change to data for test
+// const OUTPUT_FILE = "C:\\Users\\LUCKY\\Desktop\\Web Crawling\\GoogleQuery\\small input files\\output1.csv";
+const INPUT_FILE = "data.csv";
+const OUTPUT_FILE = "output.csv";
 
 const USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0";
 const URL = "https://www.google.com/search?q=";
@@ -45,7 +45,12 @@ var writer = csvWriter(
         headers: headers
     });
 
-writer.pipe(fs.createWriteStream(OUTPUT_FILE, {flags:'r+'}));
+/**
+ * flags: 'w' -> overwriting a file
+ * flags: 'r+' -> modifying a file
+ * flags: 'a' -> appending to a file
+ */
+writer.pipe(fs.createWriteStream(OUTPUT_FILE, {flags:'a'}));
 
 
 
@@ -85,6 +90,10 @@ function getQuery(word, callback)
                 {
                     if (result !== 200)
                     {
+                        rider
+                            .status()
+                            .log();
+
                         console.log("Website does NOT load!");
                         rider.close();
                         callback(null);
@@ -156,13 +165,13 @@ function getQuery(word, callback)
 function processQuery(res, word)
 {
     // Split root
-    var arrStrBranch = res.split(/\sreinforced by\s|;\sbased on\s/);
+    var arrStrBranch = res.split(/\s*reinforced by\s*|;\s*based on\s*|\s*;\s*related\s*to\s*/);
 
     // Test
-    // for (i = 0; i < arrStrBranch.length; ++i)
-    // {
-    //     console.log("arrStrBranch " + i + " " + arrStrBranch[i]);
-    // }
+    for (i = 0; i < arrStrBranch.length; ++i)
+    {
+        console.log("arrStrBranch " + i + " " + arrStrBranch[i]);
+    }
 
     var keyValue = [];
     var finalKeyVal = [];
@@ -187,8 +196,12 @@ function processQuery(res, word)
 
 
         // Split 2nd layer
-        var arrStr = currValRoot.split(/[:,\s]*from\s|\(based on\s/);
-
+        var arrStr = currValRoot.split(/[:,\s]*from\s|\(based on\s|\s*,\s*of\s*/);
+        // Test
+        for (i = 0; i < arrStr.length; ++i)
+        {
+            console.log("arrStr " + i + " " + arrStr[i]);
+        }
 
         // Test if arrStr still has member
         var currOrigin = BLANK;
@@ -196,7 +209,7 @@ function processQuery(res, word)
 
         arrStr.forEach(function (currVal2ndLayer, currIndex2ndLayer, currArr2ndLayer)
         {
-            var arrLeaf = currVal2ndLayer.split(/\s\+\s/);
+            var arrLeaf = currVal2ndLayer.split(/\s\+\s|\s*and\s*/);
 
 
 
