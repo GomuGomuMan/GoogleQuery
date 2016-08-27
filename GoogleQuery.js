@@ -219,39 +219,77 @@ function processQuery(res, word)
             {
                 var currWord = BLANK;
                 var currDef = BLANK;
-                var currOriginTrue = currLastLayer.match(/(.+)(?:<i>.*<\/i>)/);
-                var currWordTrue = currLastLayer.match(/<i>(.*)<\/i>/); // Remove <i> tag after having the word by itself
-                var currDefTrue = currLastLayer.match(/‘(.+)’/);
+
+                console.log("currLastLayer: " + currLastLayer);
+
+                var extractedArr = currLastLayer.match(/(.+)\s<i>(.+)<\/i>\s*‘(.*)’/);
 
 
 
-                if (currOriginTrue) // Origin
+                if (!extractedArr) // No word or word def or both
                 {
-                    currOrigin = currOriginTrue[1];
+                    if (extractedArr = currLastLayer.match(/<i>(.+)<\/i>\s*‘(.*)’/)) // No origin
+                    {
+                        currWord = extractedArr[1];
+                        currDef = extractedArr[2];
+                    }
+                    else if (extractedArr = currLastLayer.match(/(.+)\s<i>(.+)<\/i>\s*/)) // No def
+                    {
+                        currOrigin = extractedArr[1];
+                        currWord = extractedArr[2]; // Remove <i> tag after having the word by itself
 
-                    currWord = currWordTrue[1];
+                    }
+                    else // Only word origin
+                    {
+                        currOrigin = currLastLayer;
+
+                        if (currIndex2ndLayer == 0)
+                            currWord = word;
+                    }
 
 
-                    if (currDefTrue)
-                        currDef = currDefTrue[1];
                 }
                 else
                 {
-                    if (currIndex2ndLayer == 0)
-                        currWord = word;
-                    else if (currWordTrue)
-                        currWord = currWordTrue[1];
-
-                    if (currDefTrue) // no origin && def
-                    {
-                        currDef = currDefTrue[1];
-                    }
-                    else // No origin && No def
-                    {
-                        currOrigin = currLastLayer;
-                    }
+                    currOrigin = extractedArr[1];
+                    currWord = extractedArr[2]; // Remove <i> tag after having the word by itself
+                    currDef = extractedArr[3];
 
                 }
+
+
+
+
+
+
+
+                // if (currOriginTrue) // Origin
+                // {
+                //     currOrigin = currOriginTrue;
+                //
+                //     currWord = currWordTrue;
+                //
+                //
+                //     if (currDefTrue)
+                //         currDef = currDefTrue;
+                // }
+                // else
+                // {
+                //     if (currIndex2ndLayer == 0)
+                //         currWord = word;
+                //     else if (currWordTrue)
+                //         currWord = currWordTrue;
+                //
+                //     if (currDefTrue) // no origin && def
+                //     {
+                //         currDef = currDefTrue;
+                //     }
+                //     else // No origin && No def
+                //     {
+                //         currOrigin = currLastLayer;
+                //     }
+                //
+                // }
 
 
                 // Test
@@ -373,7 +411,7 @@ var parser = parse({delimiter: ','}, function(err, data) {
     async.eachLimit(data, 5, getQuery, function(err) {
         if (err)
         {
-          console.log("Error: " + err);
+            console.log("Error: " + err);
         }
     })
 });
