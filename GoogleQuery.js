@@ -10,6 +10,7 @@ var parse = require('csv-parse');
 
 
 
+
 // const INPUT_FILE = "C:\\Users\\LUCKY\\Desktop\\Web Crawling\\GoogleQuery\\small input files\\test1.csv"; // Change to data for test
 // const OUTPUT_FILE = "C:\\Users\\LUCKY\\Desktop\\Web Crawling\\GoogleQuery\\small input files\\output1.csv";
 const INPUT_FILE = "data.csv";
@@ -26,9 +27,10 @@ const COMMAND_ENTER_BTN = 16777221;
 
 const COL1 = "Origin";
 const COL2 = "Word";
-
-
 const COL3 = "Def";
+
+const MIN = 2000;
+const MAX = 5000;
 
 
 
@@ -41,9 +43,9 @@ for (count = 1; count < 20; ++count)
 
 
 var writer = csvWriter(
-    {
-        headers: headers
-    });
+{
+    headers: headers
+});
 
 /**
  * flags: 'w' -> overwriting a file
@@ -61,99 +63,105 @@ function getQuery(word, callback)
 {
     console.log("Word: " + word);
 
-    setTimeout(function () {
+    // Faking human delays
+    setTimeout(function()
+    {
+        setTimeout(function () {
 
-        // Check if input contains a digit = cannot be word
-        if (String(word).match(/.*\d.*/))
-        {
-            //console.log("Number found: " + word);
-            callback(null);
-            return 0;
-        }
-
-
-        else
-        {
-            var rider = new Horsemen(
-                {
-                    loadImages: false,
-                    timeout: 10000
-                }
-            );
+            // Check if input contains a digit = cannot be word
+            if (String(word).match(/.*\d.*/))
+            {
+                //console.log("Number found: " + word);
+                callback(null);
+                return 0;
+            }
 
 
-            rider
-                .userAgent(USER_AGENT)
-                .open(URL + word + SEARCH_PADDING)
-                .status()
-                .then(function (result)
-                {
-                    if (result !== 200)
+            else
+            {
+                var rider = new Horsemen(
                     {
-                        rider
-                            .status()
-                            .log();
-
-                        console.log("Website does NOT load!");
-                        rider.close();
-                        callback(null);
-                        return 1;
+                        loadImages: false,
+                        timeout: 10000
                     }
+                );
 
 
-                    else
+                rider
+                    .userAgent(USER_AGENT)
+                    .open(URL + word + SEARCH_PADDING)
+                    .status()
+                    .then(function (result)
                     {
-                        // console.log("Website loads! " + word);
+                        if (result !== 200)
+                        {
+                            rider
+                                .status()
+                                .log();
 
-                        rider
-                            .text(JQUERY_SELECTOR_EXPAND_BTN)
-                            .then(function (res) {
-                                if (!res)
-                                {
-                                    console.log("No def found! " + res);
-                                    rider.close();
-                                    callback(null);
-                                    return 1;
-                                }
+                            console.log("Website does NOT load!");
+                            rider.close();
+                            callback(null);
+                            return 1;
+                        }
 
-                                else
-                                {
-                                    rider
-                                        .click(JQUERY_SELECTOR_EXPAND_BTN) // Click expand button
-                                        .keyboardEvent(COMMAND_KEY_PRESS, COMMAND_ENTER_BTN) // Hit Enter
-                                        .text(JQUERY_SELECTOR_QUERY)
-                                        .then(function (res) {
-                                            if (!res || res.match(/^\s*Translate/))
-                                            {
-                                                console.log("No tree found! " + word);
-                                                rider.close();
-                                                return 0;
-                                            }
 
-                                            rider
-                                                .html(JQUERY_SELECTOR_QUERY)
-                                                .then(function (res)
+                        else
+                        {
+                            // console.log("Website loads! " + word);
+
+                            rider
+                                .text(JQUERY_SELECTOR_EXPAND_BTN)
+                                .then(function (res) {
+                                    if (!res)
+                                    {
+                                        console.log("No def found! " + res);
+                                        rider.close();
+                                        callback(null);
+                                        return 1;
+                                    }
+
+                                    else
+                                    {
+                                        rider
+                                            .click(JQUERY_SELECTOR_EXPAND_BTN) // Click expand button
+                                            .keyboardEvent(COMMAND_KEY_PRESS, COMMAND_ENTER_BTN) // Hit Enter
+                                            .text(JQUERY_SELECTOR_QUERY)
+                                            .then(function (res) {
+                                                if (!res || res.match(/^\s*Translate/))
                                                 {
-                                                    processQuery(res, word);
-                                                })
-                                                .catch(function (err)
-                                                {
-                                                    console.log("Error: " + err);
-                                                })
-                                                .close();
-                                        });
-                                    callback(null);
-                                }
+                                                    console.log("No tree found! " + word);
+                                                    rider.close();
+                                                    return 0;
+                                                }
 
-                            })
-                    }
-                });
-        }
+                                                rider
+                                                    .html(JQUERY_SELECTOR_QUERY)
+                                                    .then(function (res)
+                                                    {
+                                                        processQuery(res, word);
+                                                    })
+                                                    .catch(function (err)
+                                                    {
+                                                        console.log("Error: " + err);
+                                                    })
+                                                    .close();
+                                            });
+                                        callback(null);
+                                    }
 
-        var date = new Date();
-        console.log("Word " + word + " Finished at: " + date.getHours() + ":" + date.getMinutes() + ":"
-            + date.getSeconds() + '\n');
-    }, 1000);
+                                })
+                        }
+                    });
+            }
+
+            var date = new Date();
+            console.log("Word " + word + " Finished at: " + date.getHours() + ":" + date.getMinutes() + ":"
+                + date.getSeconds() + '\n');
+        }, 1000);
+    }, getRandomInt());
+
+
 
 
 
@@ -165,7 +173,8 @@ function getQuery(word, callback)
 function processQuery(res, word)
 {
     // Split root
-    var arrStrBranch = res.split(/\s*reinforced by\s*|;\s*based on\s*|\s*;\s*related\s*to\s*/);
+    console.log("Res: " + res);
+    var arrStrBranch = res.split(/\s*reinforced by\s*|;\s*based on\s*|\s*;\s*related\s*to\s*|\s+[,\s]*or\s+/);
 
     // Test
     for (i = 0; i < arrStrBranch.length; ++i)
@@ -183,20 +192,20 @@ function processQuery(res, word)
 
 
         // Test
-        // if (currIndexRoot > 0)
-        // {
-        //
-        //     for (i = 0; i < keyValue.length; ++i)
-        //     {
-        //         console.log(i + ": " + keyValue[i] + '\n');
-        //     }
-        //
-        // }
+        if (currIndexRoot > 0)
+        {
+
+            for (i = 0; i < keyValue.length; ++i)
+            {
+                console.log(i + ": " + keyValue[i] + '\n');
+            }
+
+        }
 
 
 
         // Split 2nd layer
-        var arrStr = currValRoot.split(/[:,\s]*from\s|\(based on\s|\s*,\s*of\s*/);
+        var arrStr = currValRoot.split(/[:,(\s]*from\s|\(based on\s|\s*,\s*of\s*|\s*,\s*via\s*|\(.*suggested\s*by\s*/);
         // Test
         for (i = 0; i < arrStr.length; ++i)
         {
@@ -209,130 +218,112 @@ function processQuery(res, word)
 
         arrStr.forEach(function (currVal2ndLayer, currIndex2ndLayer, currArr2ndLayer)
         {
-            var arrLeaf = currVal2ndLayer.split(/\s\+\s|\s*and\s*/);
-
-
-
-
-
-            arrLeaf.forEach(function (currLastLayer, currIndexLastLayer, currArrLastLayer)
+            if (currVal2ndLayer) // If element is not null -> cont
             {
-                var currWord = BLANK;
-                var currDef = BLANK;
-
-                console.log("currLastLayer: " + currLastLayer);
-
-                var extractedArr = currLastLayer.match(/(.+)\s<i>(.+)<\/i>\s*‘(.*)’/);
-
-
-
-                if (!extractedArr) // No word or word def or both
-                {
-                    if (extractedArr = currLastLayer.match(/<i>(.+)<\/i>\s*‘(.*)’/)) // No origin
-                    {
-                        currWord = extractedArr[1];
-                        currDef = extractedArr[2];
-                    }
-                    else if (extractedArr = currLastLayer.match(/(.+)\s<i>(.+)<\/i>\s*/)) // No def
-                    {
-                        currOrigin = extractedArr[1];
-                        currWord = extractedArr[2]; // Remove <i> tag after having the word by itself
-
-                    }
-                    else // Only word origin
-                    {
-                        currOrigin = currLastLayer;
-
-                        if (currIndex2ndLayer == 0)
-                            currWord = word;
-                    }
-
-
-                }
-                else
-                {
-                    currOrigin = extractedArr[1];
-                    currWord = extractedArr[2]; // Remove <i> tag after having the word by itself
-                    currDef = extractedArr[3];
-
-                }
-
-
-
-
-
-
-
-                // if (currOriginTrue) // Origin
-                // {
-                //     currOrigin = currOriginTrue;
-                //
-                //     currWord = currWordTrue;
-                //
-                //
-                //     if (currDefTrue)
-                //         currDef = currDefTrue;
-                // }
-                // else
-                // {
-                //     if (currIndex2ndLayer == 0)
-                //         currWord = word;
-                //     else if (currWordTrue)
-                //         currWord = currWordTrue;
-                //
-                //     if (currDefTrue) // no origin && def
-                //     {
-                //         currDef = currDefTrue;
-                //     }
-                //     else // No origin && No def
-                //     {
-                //         currOrigin = currLastLayer;
-                //     }
-                //
-                // }
+                var arrLeaf = currVal2ndLayer.split(/\s\+\s|\s*and\s*/);
 
 
                 // Test
-                // console.log("------------------------------------------------------");
-                // console.log("Member " + currIndexLastLayer + " " + currLastLayer + '\n');
-                // console.log("------------------------------------------------------");
-                // console.log("------------------------------------------------------");
-                // console.log("CurrOrigin: " + currOrigin);
-                // console.log("currWord: " + currWord);
-                // console.log("currDef: " + currDef);
-                // console.log("------------------------------------------------------");
-
-
-                pushKeyVal(keyValue, currOrigin, currWord, currDef);
-                finalKeyVal = keyValue.slice(0); // Save a path to the final val
-
-                // Save root iff there is a branch from root & operation on 2ndLayer has finished
-                if (currIndexRoot < currArrRoot.length - 1
-                    && currIndex2ndLayer == currArr2ndLayer.length - 1)
+                for (i = 0; i < arrLeaf.length; ++i)
                 {
-                    keyValue = keyValue.splice(0, 3);
-                    // console.log("keyValue: " + keyValue);
-                }
-
-
-                // Save root -> before leaf if there are multiple leaves
-                if (currIndexLastLayer < currArrLastLayer.length - 1)
-                {
-                    cleanandWrite(finalKeyVal, writer);
-
-                    keyValue = keyValue.splice(0, keyValue.length - 3);
-                    // console.log("keyValueLeaf: " + keyValue);
+                    console.log("arrLeaf " + i + " " + arrLeaf[i]);
                 }
 
 
 
+                arrLeaf.forEach(function (currLastLayer, currIndexLastLayer, currArrLastLayer)
+                {
+                    var currWord = BLANK;
+                    var currDef = BLANK;
+
+                    // console.log("currLastLayer: " + currLastLayer);
+
+                    var extractedArr = currLastLayer.match(/(.+)\s<i>(.+)<\/i>\s*‘(.*)’/);
 
 
-                // Write to finalKeyVal when finishing a leaf
+
+                    if (!extractedArr) // No word or word def or both
+                    {
+                        if (extractedArr = currLastLayer.match(/<i>(.+)<\/i>\s*‘(.*)’/)) // No origin
+                        {
+                            currWord = extractedArr[1];
+                            currDef = extractedArr[2];
+                        }
+                        else if (extractedArr = currLastLayer.match(/(.+)\s<i>(.+)<\/i>\s*/)) // No def
+                        {
+                            currOrigin = extractedArr[1];
+                            currWord = extractedArr[2]; // Remove <i> tag after having the word by itself
+
+                        }
+                        else if (extractedArr = currLastLayer.match(/\s*<i>(.+)<\/i>\s*/)) // No origin && No def
+                        {
+                            currWord = extractedArr[1];
+                        }
+                        else // Only word origin
+                        {
+                            currOrigin = currLastLayer;
+
+                            if (currIndex2ndLayer == 0)
+                                currWord = word;
+                        }
+
+
+                    }
+                    else
+                    {
+                        currOrigin = extractedArr[1];
+                        currWord = extractedArr[2]; // Remove <i> tag after having the word by itself
+                        currDef = extractedArr[3];
+
+                    }
+
+
+                    // Test
+                    // console.log("------------------------------------------------------");
+                    // console.log("Member " + currIndexLastLayer + " " + currLastLayer + '\n');
+                    // console.log("------------------------------------------------------");
+                    // console.log("------------------------------------------------------");
+                    // console.log("CurrOrigin: " + currOrigin);
+                    // console.log("currWord: " + currWord);
+                    // console.log("currDef: " + currDef);
+                    // console.log("------------------------------------------------------");
+
+
+                    pushKeyVal(keyValue, currOrigin, currWord, currDef);
+                    finalKeyVal = keyValue.slice(0); // Save a path to the final val
+
+                    // Save root iff there is a branch from root & operation on 2ndLayer has finished
+                    if (currIndexRoot < currArrRoot.length - 1
+                        && currIndex2ndLayer == currArr2ndLayer.length - 1)
+                    {
+                        // console.log("CurrIndex2ndLayer: " + currIndex2ndLayer);
+                        keyValue = keyValue.splice(0, 3 * currIndex2ndLayer);
+                        // console.log("keyValue: " + keyValue);
+                    }
+
+
+                    // Save root -> before leaf if there are multiple leaves
+                    if (currIndexLastLayer < currArrLastLayer.length - 1)
+                    {
+
+                        cleanandWrite(finalKeyVal, writer);
+
+                        keyValue = keyValue.splice(0, keyValue.length - 3);
+                        // console.log("keyValueLeaf: " + keyValue);
+                    }
 
 
 
-            });
+
+
+                    // Write to finalKeyVal when finishing a leaf
+
+
+
+                });
+            }
+
+
         });
 
 
@@ -398,6 +389,12 @@ function increaseColSize(count)
     headers.push(COL1 + count);
     headers.push(COL2 + count);
     headers.push(COL3 + count);
+}
+
+
+function getRandomInt()
+{
+    return Math.floor(Math.random() * (MAX - MIN + 1)) + MIN;
 }
 
 
