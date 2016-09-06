@@ -11,10 +11,10 @@ var parse = require('csv-parse');
 
 
 
-// const INPUT_FILE = "C:\\Users\\LUCKY\\Desktop\\Web Crawling\\GoogleQuery\\small input files\\test1.csv"; // Change to data for test
-// const OUTPUT_FILE = "C:\\Users\\LUCKY\\Desktop\\Web Crawling\\GoogleQuery\\small input files\\output1.csv";
-const INPUT_FILE = "data.csv";
-const OUTPUT_FILE = "output.csv";
+const INPUT_FILE = "C:\\Users\\LUCKY\\Desktop\\Web Crawling\\GoogleQuery\\small input files\\test5.csv"; // Change to data for test
+const OUTPUT_FILE = "C:\\Users\\LUCKY\\Desktop\\Web Crawling\\GoogleQuery\\small input files\\output1.csv";
+// const INPUT_FILE = "data.csv";
+// const OUTPUT_FILE = "output.csv";
 
 const USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0";
 const URL = "https://www.google.com/search?q=";
@@ -29,8 +29,8 @@ const COL1 = "Origin";
 const COL2 = "Word";
 const COL3 = "Def";
 
-const MIN = 2000;
-const MAX = 5000;
+const MIN_TIME = 10000;
+const MAX_TIME = 20000;
 
 
 
@@ -63,102 +63,90 @@ function getQuery(word, callback)
 {
     console.log("Word: " + word);
 
+    // Check if input contains a digit -> cannot be word
+    if (String(word).match(/.*\d.*/))
+    {
+        //console.log("Number found: " + word);
+        callback(null);
+        return 0;
+    }
+
     // Faking human delays
     setTimeout(function()
     {
-        setTimeout(function () {
 
-            // Check if input contains a digit = cannot be word
-            if (String(word).match(/.*\d.*/))
+        var rider = new Horsemen(
             {
-                //console.log("Number found: " + word);
-                callback(null);
-                return 0;
+                loadImages: false,
+                timeout: 10000
             }
+        );
 
 
-            else
+        rider
+            .userAgent(USER_AGENT)
+            .open(URL + word + SEARCH_PADDING)
+            .status()
+            .then(function (result)
             {
-                var rider = new Horsemen(
-                    {
-                        loadImages: false,
-                        timeout: 10000
-                    }
-                );
+                if (result !== 200)
+                {
+                    if (result == 302) // Check to see if Google Captcha appears
+                        console.log("IP addr has been blocked!");
 
+                    console.log("Website does NOT load!");
+                    rider.close();
+                    callback(null);
+                    return 1;
+                }
+
+                // console.log("Website loads! " + word);
 
                 rider
-                    .userAgent(USER_AGENT)
-                    .open(URL + word + SEARCH_PADDING)
-                    .status()
-                    .then(function (result)
-                    {
-                        if (result !== 200)
+                    .exists(JQUERY_SELECTOR_EXPAND_BTN)
+                    .then(function (res) {
+                        if (!res)
                         {
-                            rider
-                                .status()
-                                .log();
-
-                            console.log("Website does NOT load!");
+                            console.log("No def found! ");
                             rider.close();
                             callback(null);
                             return 1;
                         }
 
+                        rider
+                            .click(JQUERY_SELECTOR_EXPAND_BTN) // Click expand button
+                            .keyboardEvent(COMMAND_KEY_PRESS, COMMAND_ENTER_BTN) // Hit Enter
+                            .text(JQUERY_SELECTOR_QUERY)
+                            .then(function (res) {
+                                if (!res || res.match(/^\s*Translate/))
+                                {
+                                    console.log("No tree found! " + word);
+                                    rider.close();
+                                    return 0;
+                                }
 
-                        else
-                        {
-                            // console.log("Website loads! " + word);
-
-                            rider
-                                .text(JQUERY_SELECTOR_EXPAND_BTN)
-                                .then(function (res) {
-                                    if (!res)
+                                rider
+                                    .html(JQUERY_SELECTOR_QUERY)
+                                    .then(function (res)
                                     {
-                                        console.log("No def found! " + res);
-                                        rider.close();
-                                        callback(null);
-                                        return 1;
-                                    }
-
-                                    else
+                                        processQuery(res, word);
+                                    })
+                                    .catch(function (err)
                                     {
-                                        rider
-                                            .click(JQUERY_SELECTOR_EXPAND_BTN) // Click expand button
-                                            .keyboardEvent(COMMAND_KEY_PRESS, COMMAND_ENTER_BTN) // Hit Enter
-                                            .text(JQUERY_SELECTOR_QUERY)
-                                            .then(function (res) {
-                                                if (!res || res.match(/^\s*Translate/))
-                                                {
-                                                    console.log("No tree found! " + word);
-                                                    rider.close();
-                                                    return 0;
-                                                }
+                                        console.log("Error: " + err);
+                                    })
+                                    .close();
+                            });
+                        callback(null);
 
-                                                rider
-                                                    .html(JQUERY_SELECTOR_QUERY)
-                                                    .then(function (res)
-                                                    {
-                                                        processQuery(res, word);
-                                                    })
-                                                    .catch(function (err)
-                                                    {
-                                                        console.log("Error: " + err);
-                                                    })
-                                                    .close();
-                                            });
-                                        callback(null);
-                                    }
+                    })
 
-                                })
-                        }
-                    });
-            }
+            });
 
-            var date = new Date();
-            console.log("Word " + word + " Finished at: " + date.getHours() + ":" + date.getMinutes() + ":"
-                + date.getSeconds() + '\n');
-        }, 1000);
+        var date = new Date();
+        console.log("Word " + word + " Finished at: " + date.getHours() + ":" + date.getMinutes() + ":"
+            + date.getSeconds() + '\n');
+
     }, getRandomInt());
 
 
@@ -177,10 +165,10 @@ function processQuery(res, word)
     var arrStrBranch = res.split(/\s*reinforced by\s*|;\s*based on\s*|\s*;\s*related\s*to\s*|\s+[,\s]*or\s+/);
 
     // Test
-    for (i = 0; i < arrStrBranch.length; ++i)
-    {
-        console.log("arrStrBranch " + i + " " + arrStrBranch[i]);
-    }
+    // for (i = 0; i < arrStrBranch.length; ++i)
+    // {
+    //     console.log("arrStrBranch " + i + " " + arrStrBranch[i]);
+    // }
 
     var keyValue = [];
     var finalKeyVal = [];
@@ -192,25 +180,25 @@ function processQuery(res, word)
 
 
         // Test
-        if (currIndexRoot > 0)
-        {
-
-            for (i = 0; i < keyValue.length; ++i)
-            {
-                console.log(i + ": " + keyValue[i] + '\n');
-            }
-
-        }
+        // if (currIndexRoot > 0)
+        // {
+        //
+        //     for (i = 0; i < keyValue.length; ++i)
+        //     {
+        //         console.log(i + ": " + keyValue[i] + '\n');
+        //     }
+        //
+        // }
 
 
 
         // Split 2nd layer
         var arrStr = currValRoot.split(/[:,(\s]*from\s|\(based on\s|\s*,\s*of\s*|\s*,\s*via\s*|\(.*suggested\s*by\s*/);
         // Test
-        for (i = 0; i < arrStr.length; ++i)
-        {
-            console.log("arrStr " + i + " " + arrStr[i]);
-        }
+        // for (i = 0; i < arrStr.length; ++i)
+        // {
+        //     console.log("arrStr " + i + " " + arrStr[i]);
+        // }
 
         // Test if arrStr still has member
         var currOrigin = BLANK;
@@ -224,10 +212,10 @@ function processQuery(res, word)
 
 
                 // Test
-                for (i = 0; i < arrLeaf.length; ++i)
-                {
-                    console.log("arrLeaf " + i + " " + arrLeaf[i]);
-                }
+                // for (i = 0; i < arrLeaf.length; ++i)
+                // {
+                //     console.log("arrLeaf " + i + " " + arrLeaf[i]);
+                // }
 
 
 
@@ -394,7 +382,10 @@ function increaseColSize(count)
 
 function getRandomInt()
 {
-    return Math.floor(Math.random() * (MAX - MIN + 1)) + MIN;
+    /**
+     * Returns an int in range [MIN_TIME, MAX_TIME)
+     */
+    return Math.floor(Math.random() * (MAX_TIME - MIN_TIME)) + MIN_TIME;
 }
 
 
